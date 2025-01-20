@@ -230,7 +230,11 @@ def main(args):
     #Training phase
     model = training()
 
-    vidcap = cv2.VideoCapture(args.file_name)
+    vidcap = cv2.VideoCapture(0)
+
+    if not vidcap.isOpened():
+        print("Error: Could not access the camera.")
+        return
 
     fps = vidcap.get(cv2.CAP_PROP_FPS)
     width = vidcap.get(3)  # float

@@ -10,15 +10,15 @@ import math
 
 from classification import training, getLabel
 
-SIGNS = ["ERROR",
+SIGNS = ["ONE WAY",
         "STOP",
-        "TURN LEFT",
         "TURN RIGHT",
-        "DO NOT TURN LEFT",
-        "DO NOT TURN RIGHT",
+        "TURN LEFT",
+        "NA",
+        "NA",
         "ONE WAY",
-        "SPEED LIMIT",
-        "OTHER"]
+        "NA",
+        "NA"]
 
 # Clean all previous file
 def clean_images():
@@ -31,7 +31,7 @@ def clean_images():
 ### Preprocess image
 def constrastLimit(image):
     img_hist_equalized = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
-    channels = cv2.split(img_hist_equalized)
+    channels = list(cv2.split(img_hist_equalized))
     channels[0] = cv2.equalizeHist(channels[0])
     img_hist_equalized = cv2.merge(channels)
     img_hist_equalized = cv2.cvtColor(img_hist_equalized, cv2.COLOR_YCrCb2BGR)
@@ -293,7 +293,10 @@ def main(args):
             # grab the ROI for the bounding box and convert it
             # to the HSV color space
             roi = frame[tl[1]:br[1], tl[0]:br[0]]
-            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            if roi is None or roi.size == 0:
+                 print("ROI is empty!")
+            else: 
+                roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
             #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
 
             # compute a HSV histogram for the ROI and store the

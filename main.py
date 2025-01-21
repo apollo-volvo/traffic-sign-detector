@@ -225,9 +225,9 @@ def remove_other_color(img):
     return mask
 
 def main(args):
-	#Clean previous image    
+    # Clean previous image    
     clean_images()
-    #Training phase
+    # Training phase
     model = training()
 
     vidcap = cv2.VideoCapture(0)
@@ -242,10 +242,10 @@ def main(args):
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('output.avi',fourcc, fps , (640,480))
+    out = cv2.VideoWriter('output.avi', fourcc, fps, (640, 480))
 
     # initialize the termination criteria for cam shift, indicating
-    # a maximum of ten iterations or movement by a least one pixel
+    # a maximum of ten iterations or movement by at least one pixel
     # along with the bounding box of the ROI
     termination = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
     roiBox = None
@@ -261,53 +261,61 @@ def main(args):
     coordinates = []
     position = []
     file = open("Output.txt", "w")
+    
+    # Array to keep track of detected sign types
+    detected_signs = []
+
     while True:
-        success,frame = vidcap.read()
+        success, frame = vidcap.read()
         if not success:
             print("FINISHED")
             break
         width = frame.shape[1]
         height = frame.shape[0]
-        #frame = cv2.resize(frame, (640,int(height/(width/640))))
-        frame = cv2.resize(frame, (640,480))
+        # frame = cv2.resize(frame, (640, int(height / (width / 640))))
+        frame = cv2.resize(frame, (640, 480))
 
         print("Frame:{}".format(count))
-        #image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         coordinate, image, sign_type, text = localization(frame, args.min_size_components, args.similitary_contour_with_circle, model, count, current_sign)
+        
         if coordinate is not None:
-            cv2.rectangle(image, coordinate[0],coordinate[1], (255, 255, 255), 1)
+            cv2.rectangle(image, coordinate[0], coordinate[1], (255, 255, 255), 1)
         print("Sign:{}".format(sign_type))
+        
         if sign_type > 0 and (not current_sign or sign_type != current_sign):
             current_sign = sign_type
             current_text = text
-            top = int(coordinate[0][1]*1.05)
-            left = int(coordinate[0][0]*1.05)
-            bottom = int(coordinate[1][1]*0.95)
-            right = int(coordinate[1][0]*0.95)
+            top = int(coordinate[0][1] * 1.05)
+            left = int(coordinate[0][0] * 1.05)
+            bottom = int(coordinate[1][1] * 0.95)
+            right = int(coordinate[1][0] * 0.95)
 
             position = [count, sign_type if sign_type <= 8 else 8, coordinate[0][0], coordinate[0][1], coordinate[1][0], coordinate[1][1]]
-            cv2.rectangle(image, coordinate[0],coordinate[1], (0, 255, 0), 1)
+            cv2.rectangle(image, coordinate[0], coordinate[1], (0, 255, 0), 1)
             font = cv2.FONT_HERSHEY_PLAIN
-            cv2.putText(image,text,(coordinate[0][0], coordinate[0][1] -15), font, 1,(0,0,255),2,cv2.LINE_4)
+            cv2.putText(image, text, (coordinate[0][0], coordinate[0][1] - 15), font, 1, (0, 0, 255), 2, cv2.LINE_4)
 
             tl = [left, top]
-            br = [right,bottom]
+            br = [right, bottom]
             print(tl, br)
-            current_size = math.sqrt(math.pow((tl[0]-br[0]),2) + math.pow((tl[1]-br[1]),2))
+            current_size = math.sqrt(math.pow((tl[0] - br[0]), 2) + math.pow((tl[1] - br[1]), 2))
             # grab the ROI for the bounding box and convert it
             # to the HSV color space
             roi = frame[tl[1]:br[1], tl[0]:br[0]]
             if roi is None or roi.size == 0:
-                 print("ROI is empty!")
+                print("ROI is empty!")
             else: 
                 roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-            #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
             roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
             roiBox = (tl[0], tl[1], br[0], br[1])
+
+            # Append detected sign type to the array
+            detected_signs.append(sign_type)
 
         elif current_sign:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -317,13 +325,13 @@ def main(args):
             # points to a bounding box, and then draw them
             (r, roiBox) = cv2.CamShift(backProj, roiBox, termination)
             pts = np.int0(cv2.boxPoints(r))
-            s = pts.sum(axis = 1)
+            s = pts.sum(axis=1)
             tl = pts[np.argmin(s)]
             br = pts[np.argmax(s)]
-            size = math.sqrt(pow((tl[0]-br[0]),2) +pow((tl[1]-br[1]),2))
+            size = math.sqrt(pow((tl[0] - br[0]), 2) + pow((tl[1] - br[1]), 2))
             print(size)
 
-            if  current_size < 1 or size < 1 or size / current_size > 30 or math.fabs((tl[0]-br[0])/(tl[1]-br[1])) > 2 or math.fabs((tl[0]-br[0])/(tl[1]-br[1])) < 0.5:
+            if current_size < 1 or size < 1 or size / current_size > 30 or math.fabs((tl[0] - br[0]) / (tl[1] - br[1])) > 2 or math.fabs((tl[0] - br[0]) / (tl[1] - br[1])) < 0.5:
                 current_sign = None
                 print("Stop tracking")
             else:
@@ -336,14 +344,14 @@ def main(args):
                 right = int(coordinate[1][0])
 
                 position = [count, sign_type if sign_type <= 8 else 8, left, top, right, bottom]
-                cv2.rectangle(image, coordinate[0],coordinate[1], (0, 255, 0), 1)
+                cv2.rectangle(image, coordinate[0], coordinate[1], (0, 255, 0), 1)
                 font = cv2.FONT_HERSHEY_PLAIN
-                cv2.putText(image,text,(coordinate[0][0], coordinate[0][1] -15), font, 1,(0,0,255),2,cv2.LINE_4)
+                cv2.putText(image, text, (coordinate[0][0], coordinate[0][1] - 15), font, 1, (0, 0, 255), 2, cv2.LINE_4)
             elif current_sign:
                 position = [count, sign_type if sign_type <= 8 else 8, tl[0], tl[1], br[0], br[1]]
-                cv2.rectangle(image, (tl[0], tl[1]),(br[0], br[1]), (0, 255, 0), 1)
+                cv2.rectangle(image, (tl[0], tl[1]), (br[0], br[1]), (0, 255, 0), 1)
                 font = cv2.FONT_HERSHEY_PLAIN
-                cv2.putText(image,current_text,(tl[0], tl[1] -15), font, 1,(0,0,255),2,cv2.LINE_4)
+                cv2.putText(image, current_text, (tl[0], tl[1] - 15), font, 1, (0, 0, 255), 2, cv2.LINE_4)
 
         if current_sign:
             sign_count += 1
@@ -351,16 +359,20 @@ def main(args):
 
         cv2.imshow('Result', image)
         count = count + 1
-        #Write to video
+        # Write to video
         out.write(image)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+    
     file.write("{}".format(sign_count))
     for pos in coordinates:
-        file.write("\n{} {} {} {} {} {}".format(pos[0],pos[1],pos[2],pos[3],pos[4], pos[5]))
+        file.write("\n{} {} {} {} {} {}".format(pos[0], pos[1], pos[2], pos[3], pos[4], pos[5]))
+    
+    print("Detected signs:", detected_signs)  # Print the detected signs
     print("Finish {} frames".format(count))
     file.close()
     return 
+
 
 
 if __name__ == '__main__':
